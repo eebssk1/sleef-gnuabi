@@ -1,0 +1,54 @@
+name: Builds
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/eebssk1/debian-trixie:latest
+      volumes:
+        - /root:/user
+        - /mnt:/build
+    
+    env:
+        CFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -fgcse-las -falign-labels=8:7:4 -falign-functions=24:18 -fmin-function-alignment=16 -ffunction-sections -fdata-sections"
+        CXXFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -fgcse-las -falign-labels=8:7:4 -falign-functions=24:18 -fmin-function-alignment=16 -ffunction-sections -fdata-sections"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: load toolchain
+        run: curl -sL "https://github.com/eebssk1/aio_tc_build/releases/latest/download/x86_64-linux-gnu-native.tb2" | tar -C /opt --bz -x
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends --yes \
+            cmake \
+            build-essential
+
+      - name: build and move
+        run: |
+          export PATH="/opt/x86_64-linux-gnu/bin:$PATH"
+          cmake -B builds -DSLEEF_BUILD_LIBM=OFF -DSLEEF_BUILD_GNUABI_LIBS=ON -DSLEEF_BUILD_BENCH=OFF -DSLEEF_ENABLE_TLFLOAT=ON -DSLEEF_BUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_PREFIX=$PWD/outs -DCMAKE_BUILD_TYPE=Release
+          cmake --build ./builds
+          cmake --install ./builds
+          mkdir libs
+          find outs -type f -name "lib*.a" -exec mv {} libs/ \;
+
+      - name: Upload resulting build
+        uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: libs/*
+
+      - name: ondemand release
+        uses: pyTooling/Actions/releaser@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: libs/*
+          tag: ondemand
