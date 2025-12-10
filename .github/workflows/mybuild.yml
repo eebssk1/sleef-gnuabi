@@ -33,7 +33,7 @@ jobs:
       - name: build and move
         run: |
           export PATH="/opt/x86_64-linux-gnu/bin:$PATH"
-          cmake -B builds -DSLEEF_BUILD_LIBM=OFF -DSLEEF_BUILD_GNUABI_LIBS=ON -DSLEEF_BUILD_BENCH=OFF -DSLEEF_ENABLE_TLFLOAT=ON -DSLEEF_BUILD_SHARED_LIBS=OFF \
+          cmake -B builds -DSLEEF_BUILD_LIBM=OFF -DSLEEF_BUILD_GNUABI_LIBS=ON -DSLEEF_BUILD_BENCH=OFF -DSLEEF_ENABLE_TLFLOAT=ON -DSLEEF_BUILD_TESTS=OFF -DSLEEF_BUILD_SHARED_LIBS=OFF \
             -DCMAKE_INSTALL_PREFIX=$PWD/outs -DCMAKE_BUILD_TYPE=Release
           cmake --build ./builds
           cmake --install ./builds
