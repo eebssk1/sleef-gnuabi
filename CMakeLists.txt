@@ -17,6 +17,7 @@ option(SLEEF_ENABLE_ASAN "Enable address sanitizing on all targets." OFF)
 option(SLEEF_BUILD_LIBM "libsleef will be built." ON)
 option(SLEEF_BUILD_DFT "libsleefdft will be built." OFF)
 option(SLEEF_BUILD_QUAD "libsleefquad will be built." OFF)
+option(SLEEF_BUILD_GNUABI_LIBS "libsleefgnuabi will be built." ON)
 option(SLEEF_BUILD_TESTS "Tests will be built." ON)
 option(SLEEF_BUILD_INLINE_HEADERS "Build header for inlining whole SLEEF functions" OFF)
 option(SLEEF_SHOW_CONFIG "Show SLEEF configuration status messages." ON)
@@ -54,8 +55,10 @@ option(SLEEF_BUILD_WITH_LIBM "build libsleef with libm, can turn off on Windows 
 option(SLEEF_ENABLE_FLOAT128 "Enable float128" ON)
 option(SLEEF_ENFORCE_FLOAT128 "Build fails if float128 is not supported by the compiler" OFF)
 
-option(SLEEF_ENABLE_SSE2 "Enable SSE2" OFF)
+option(SLEEF_ENABLE_SSE2 "Enable SSE2" ON)
 option(SLEEF_ENFORCE_SSE2 "Build fails if SSE2 is not supported by the compiler" OFF)
+option(SLEEF_ENABLE_AVX "Enable AVX" ON)
+option(SLEEF_ENFORCE_AVX "Build fails if AVX is not supported by the compiler" OFF)
 option(SLEEF_ENABLE_AVX2 "Enable AVX2" ON)
 option(SLEEF_ENFORCE_AVX2 "Build fails if AVX2 is not supported by the compiler" OFF)
 option(SLEEF_ENABLE_AVX512F "Enable AVX512F" ON)
@@ -112,6 +115,10 @@ endif()
 
 if (SLEEF_ENABLE_SSE2)
   message(WARNING "You enabled SSE2 support, which is an experimental feature. Experimental features may be removed without notice.")
+endif()
+
+if (SLEEF_ENFORCE_AVX)
+  set(SLEEF_ENABLE_AVX ON)
 endif()
 
 if (SLEEF_ENFORCE_AVX2)
@@ -239,7 +246,7 @@ endfunction()
 # Settings
 
 set(SLEEF_ALL_SUPPORTED_EXTENSIONS
-  AVX512F AVX2 AVX2128 SSE2          # x86
+  AVX512F AVX2 AVX2128 AVX SSE2          # x86
   SVE ADVSIMD                        # Aarch64
   VSX VSX3                           # PPC64
   VXE VXE2                           # IBM Z
@@ -273,6 +280,19 @@ set(SLEEF_SUPPORTED_QUAD_EXTENSIONS
 
 set(SLEEF_SUPPORTED_INLINE_QUAD_EXTENSIONS
   PURECFMA_SCALAR AVX2128 AVX2 AVX512F ADVSIMD SVE VSX VSX3 VXE VXE2 RVVM1 RVVM2)
+
+set(SLEEF_SUPPORTED_GNUABI_EXTENSIONS 
+  SSE2 AVX AVX2 AVX512F ADVSIMD SVE
+  CACHE STRING "List of SIMD architectures supported by libsleef for GNU ABI."
+)
+
+# MKMASKED_PARAMS
+
+command_arguments(MKMASKED_PARAMS_GNUABI_AVX512F_dp avx512f e 8)
+command_arguments(MKMASKED_PARAMS_GNUABI_AVX512F_sp avx512f e -16)
+
+command_arguments(MKMASKED_PARAMS_GNUABI_SVE_dp sve s 2)
+command_arguments(MKMASKED_PARAMS_GNUABI_SVE_sp sve s -4)
 
 #
 
@@ -357,6 +377,7 @@ include_directories(AFTER "${PROJECT_BINARY_DIR}/include")
 # Generates object file (shared library) `libsleef`
 # Defined in src/libm/CMakeLists.txt via command add_library
 set(TARGET_LIBSLEEF "sleef")
+set(TARGET_LIBSLEEFGNUABI "sleefgnuabi")
 # Generates the sleef.h headers and all the rename headers
 # Defined in src/libm/CMakeLists.txt via custom commands and a custom target
 set(TARGET_HEADERS "headers")
@@ -371,6 +392,8 @@ set(TARGET_IUT "iut")
 set(TARGET_LLVM_BITCODE "llvm-bitcode")
 # Generates the helper executable file mkrename needed to write the sleef header
 set(TARGET_MKRENAME "mkrename")
+set(TARGET_MKRENAME_GNUABI "mkrename_gnuabi")
+set(TARGET_MKMASKED_GNUABI "mkmasked_gnuabi")
 # Generates the helper executable file mkdisp needed to write the sleef header
 set(TARGET_MKDISP "mkdisp")
 set(TARGET_MKALIAS "mkalias")
@@ -479,6 +502,9 @@ if(SLEEF_SHOW_CONFIG)
     message(STATUS "SED : " ${SED_COMMAND})
   endif()
   message(STATUS "COMPILER_SUPPORTS_OPENMP : " ${COMPILER_SUPPORTS_OPENMP})
+  if(ENABLE_GNUABI)
+    message(STATUS "A version of SLEEF compatible  with libm and libmvec in GNU libc will be produced (${TARGET_LIBSLEEFGNUABI}.so)")
+  endif()
   if (COMPILER_SUPPORTS_SVE)
     message(STATUS "Building SLEEF with VLA SVE support")
   endif()

@@ -4,6 +4,7 @@
 # TESTER3_DEFINITIONS
 
 set(TESTER3_DEFINITIONS_SSE2            DPTYPE=__m128d SPTYPE=__m128 DPTYPESPEC=d2 SPTYPESPEC=f4  EXTSPEC=sse2)
+set(TESTER3_DEFINITIONS_AVX             DPTYPE=__m256d SPTYPE=__m256 DPTYPESPEC=d4 SPTYPESPEC=f8  EXTSPEC=avx)
 set(TESTER3_DEFINITIONS_AVX2128         DPTYPE=__m128d SPTYPE=__m128 DPTYPESPEC=d2 SPTYPESPEC=f4  EXTSPEC=avx2128)
 set(TESTER3_DEFINITIONS_FMA4            DPTYPE=__m256d SPTYPE=__m256 DPTYPESPEC=d4 SPTYPESPEC=f8  EXTSPEC=fma4)
 set(TESTER3_DEFINITIONS_AVX2            DPTYPE=__m256d SPTYPE=__m256 DPTYPESPEC=d4 SPTYPESPEC=f8  EXTSPEC=avx2)
@@ -410,3 +411,52 @@ if (FILECHECK_COMMAND AND COMPILER_SUPPORTS_OPENMP AND SLEEF_ARCH_X86 AND CMAKE_
   add_test(NAME testervecabi-sse2 COMMAND sh -c "${CMAKE_C_COMPILER} -Wno-attributes -fopenmp -msse2 -O3 ${CMAKE_CURRENT_SOURCE_DIR}/testervecabi.c -I${sleef_BINARY_DIR}/include -S -o- | ${FILECHECK_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/testervecabi.c -check-prefix=CHECK-SSE2")
   add_test(NAME testervecabi-avx2 COMMAND sh -c "${CMAKE_C_COMPILER} -Wno-attributes -fopenmp -mavx2 -O3 ${CMAKE_CURRENT_SOURCE_DIR}/testervecabi.c -I${sleef_BINARY_DIR}/include -S -o- | ${FILECHECK_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/testervecabi.c -check-prefix=CHECK-AVX2")
 endif()
+
+function(add_gnuabi_compatibility_test SIMD MASKED)
+  if (MASKED)
+    set(GNUABI_COMPATIBILITY_TEST gnuabi_compatibility_${SIMD}_masked)
+  else(MASKED)
+    set(GNUABI_COMPATIBILITY_TEST gnuabi_compatibility_${SIMD})
+  endif(MASKED)
+  add_executable(${GNUABI_COMPATIBILITY_TEST} gnuabi_compatibility.c ${sleef_SOURCE_DIR}/src/common/main_checkfeature.c)
+  set_target_properties(${GNUABI_COMPATIBILITY_TEST} PROPERTIES ${COMMON_TARGET_PROPERTIES})
+  target_compile_options(${GNUABI_COMPATIBILITY_TEST}
+    PRIVATE ${FLAGS_ENABLE_${SIMD}})
+  if (MASKED)
+    target_compile_definitions(${GNUABI_COMPATIBILITY_TEST}
+      PRIVATE ENABLE_${SIMD}=1 ${COMMON_TARGET_DEFINITIONS} MASKED_GNUABI=1)
+  else(MASKED)
+    target_compile_definitions(${GNUABI_COMPATIBILITY_TEST}
+      PRIVATE ENABLE_${SIMD}=1 ${COMMON_TARGET_DEFINITIONS})
+  endif(MASKED)
+  target_link_libraries(${GNUABI_COMPATIBILITY_TEST} ${TARGET_LIBSLEEFGNUABI} ${LIBM})
+  # These are linker tests that don't really need to be executed,
+  # but seeing them in the report of ctest gives an idea of what
+  # has been built for testing.
+  if (EMULATOR)
+    add_test(NAME ${GNUABI_COMPATIBILITY_TEST}
+      COMMAND ${EMULATOR} $<TARGET_FILE:${GNUABI_COMPATIBILITY_TEST}>
+      WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  elseif(SDE_COMMAND)
+    add_test(NAME ${GNUABI_COMPATIBILITY_TEST}
+      COMMAND ${SDE_COMMAND} "--" $<TARGET_FILE:${GNUABI_COMPATIBILITY_TEST}>)
+  else()
+    add_test(NAME ${GNUABI_COMPATIBILITY_TEST}
+      COMMAND $<TARGET_FILE:${GNUABI_COMPATIBILITY_TEST}>)
+  endif(EMULATOR)
+endfunction(add_gnuabi_compatibility_test)
+
+if(ENABLE_GNUABI)
+  foreach(SIMD ${SLEEF_SUPPORTED_GNUABI_EXTENSIONS})
+    if(COMPILER_SUPPORTS_${SIMD})
+      # GNUABI compatibility for the unmasked symbols.
+      add_gnuabi_compatibility_test(${SIMD} OFF)
+      # GNUABI compatibility for the masked symbols.
+      if (MKMASKED_PARAMS_GNUABI_${SIMD}_sp)
+	add_gnuabi_compatibility_test(${SIMD} ON)
+      endif(MKMASKED_PARAMS_GNUABI_${SIMD}_sp)
+    endif (COMPILER_SUPPORTS_${SIMD})
+  endforeach(SIMD ${SLEEF_SUPPORTED_GNUABI_EXTENSIONS})
+endif(ENABLE_GNUABI)
+
+#

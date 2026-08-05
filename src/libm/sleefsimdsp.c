@@ -37,7 +37,27 @@ extern const float Sleef_rempitabsp[];
 #include "macroonlySSE2.h"
 #endif
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renamesse2_gnuabi.h"
+#else
 #include "renamesse2.h"
+#endif
+#endif
+#endif
+
+#ifdef ENABLE_AVX
+#define CONFIG 1
+#if !defined(SLEEF_GENHEADER)
+#include "helperavx.h"
+#else
+#include "macroonlyAVX.h"
+#endif
+#ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx_gnuabi.h"
+#else
+#include "renameavx.h"
+#endif
 #endif
 #endif
 
@@ -49,7 +69,11 @@ extern const float Sleef_rempitabsp[];
 #include "macroonlyAVX2.h"
 #endif
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx2_gnuabi.h"
+#else
 #include "renameavx2.h"
+#endif
 #endif
 #endif
 
@@ -73,7 +97,11 @@ extern const float Sleef_rempitabsp[];
 #include "macroonlyAVX512F.h"
 #endif
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx512f_gnuabi.h"
+#else
 #include "renameavx512f.h"
+#endif
 #endif
 #endif
 
@@ -87,7 +115,11 @@ extern const float Sleef_rempitabsp[];
 #include "macroonlyADVSIMD.h"
 #endif
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameadvsimd_gnuabi.h"
+#else
 #include "renameadvsimd.h"
+#endif
 #endif
 #endif
 
@@ -99,7 +131,11 @@ extern const float Sleef_rempitabsp[];
 #include "macroonlySVE.h"
 #endif
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renamesve_gnuabi.h"
+#else
 #include "renamesve.h"
+#endif /* ENABLE_GNUABI */
 #endif /* DORENAME */
 #endif /* ENABLE_SVE */
 
@@ -734,6 +770,16 @@ EXPORT CONST vfloat xfastcosf_u3500(vfloat d) {
   return u;
 }
 
+#ifdef ENABLE_GNUABI
+#define TYPE2_FUNCATR static INLINE CONST
+#define TYPE6_FUNCATR static INLINE
+#define SQRTFU05_FUNCATR static INLINE
+#define XSINCOSF sincosfk
+#define XSINCOSF_U1 sincosfk_u1
+#define XSINCOSPIF_U05 sincospifk_u05
+#define XSINCOSPIF_U35 sincospifk_u35
+#define XMODFF modffk
+#else
 #define TYPE2_FUNCATR EXPORT CONST
 #define TYPE6_FUNCATR EXPORT
 #define SQRTFU05_FUNCATR EXPORT
@@ -742,6 +788,7 @@ EXPORT CONST vfloat xfastcosf_u3500(vfloat d) {
 #define XSINCOSPIF_U05 xsincospif_u05
 #define XSINCOSPIF_U35 xsincospif_u35
 #define XMODFF xmodff
+#endif
 
 TYPE2_FUNCATR vfloat2 XSINCOSF(vfloat d) {
   vint2 q;
@@ -991,6 +1038,38 @@ TYPE6_FUNCATR vfloat2 XMODFF(vfloat x) {
 
   return ret;
 }
+
+#ifdef ENABLE_GNUABI
+EXPORT VECTOR_CC void xsincosf(vfloat a, float *ps, float *pc) {
+  vfloat2 r = sincosfk(a);
+  vstoreu_v_p_vf(ps, vf2getx_vf_vf2(r));
+  vstoreu_v_p_vf(pc, vf2gety_vf_vf2(r));
+}
+
+EXPORT VECTOR_CC void xsincosf_u1(vfloat a, float *ps, float *pc) {
+  vfloat2 r = sincosfk_u1(a);
+  vstoreu_v_p_vf(ps, vf2getx_vf_vf2(r));
+  vstoreu_v_p_vf(pc, vf2gety_vf_vf2(r));
+}
+
+EXPORT VECTOR_CC void xsincospif_u05(vfloat a, float *ps, float *pc) {
+  vfloat2 r = sincospifk_u05(a);
+  vstoreu_v_p_vf(ps, vf2getx_vf_vf2(r));
+  vstoreu_v_p_vf(pc, vf2gety_vf_vf2(r));
+}
+
+EXPORT VECTOR_CC void xsincospif_u35(vfloat a, float *ps, float *pc) {
+  vfloat2 r = sincospifk_u35(a);
+  vstoreu_v_p_vf(ps, vf2getx_vf_vf2(r));
+  vstoreu_v_p_vf(pc, vf2gety_vf_vf2(r));
+}
+
+EXPORT CONST VECTOR_CC vfloat xmodff(vfloat a, float *iptr) {
+  vfloat2 r = modffk(a);
+  vstoreu_v_p_vf(iptr, vf2gety_vf_vf2(r));
+  return vf2getx_vf_vf2(r);
+}
+#endif // #ifdef ENABLE_GNUABI
 
 EXPORT CONST vfloat xtanf_u1(vfloat d) {
   vint2 q;
@@ -2734,7 +2813,7 @@ EXPORT CONST vfloat xerfcf_u15(vfloat a) {
   return r;
 }
 
-#if !defined(SLEEF_GENHEADER)
+#if !defined(ENABLE_GNUABI) && !defined(SLEEF_GENHEADER)
 EXPORT CONST int xgetIntf(int name) {
   if (1 <= name && name <= 10) return vavailability_i(name);
   return 0;
@@ -2749,6 +2828,33 @@ EXPORT CONST void *xgetPtrf(int name) {
 #if defined(ALIAS_NO_EXT_SUFFIX)
 #include ALIAS_NO_EXT_SUFFIX
 #endif
+
+#ifdef ENABLE_GNUABI
+EXPORT CONST VECTOR_CC vfloat __acosf_finite     (vfloat)         __attribute__((weak, alias(str_xacosf_u1  )));
+EXPORT CONST VECTOR_CC vfloat __acoshf_finite    (vfloat)         __attribute__((weak, alias(str_xacoshf    )));
+EXPORT CONST VECTOR_CC vfloat __asinf_finite     (vfloat)         __attribute__((weak, alias(str_xasinf_u1  )));
+EXPORT CONST VECTOR_CC vfloat __atan2f_finite    (vfloat, vfloat) __attribute__((weak, alias(str_xatan2f_u1 )));
+EXPORT CONST VECTOR_CC vfloat __atanhf_finite    (vfloat)         __attribute__((weak, alias(str_xatanhf    )));
+EXPORT CONST VECTOR_CC vfloat __coshf_finite     (vfloat)         __attribute__((weak, alias(str_xcoshf     )));
+EXPORT CONST VECTOR_CC vfloat __exp10f_finite    (vfloat)         __attribute__((weak, alias(str_xexp10f    )));
+EXPORT CONST VECTOR_CC vfloat __exp2f_finite     (vfloat)         __attribute__((weak, alias(str_xexp2f     )));
+EXPORT CONST VECTOR_CC vfloat __expf_finite      (vfloat)         __attribute__((weak, alias(str_xexpf      )));
+EXPORT CONST VECTOR_CC vfloat __fmodf_finite     (vfloat, vfloat) __attribute__((weak, alias(str_xfmodf     )));
+EXPORT CONST VECTOR_CC vfloat __remainderf_finite(vfloat, vfloat) __attribute__((weak, alias(str_xremainderf)));
+EXPORT CONST VECTOR_CC vfloat __modff_finite      (vfloat, vfloat *) __attribute__((weak, alias(str_xmodff  )));
+EXPORT CONST VECTOR_CC vfloat __hypotf_u05_finite(vfloat, vfloat) __attribute__((weak, alias(str_xhypotf_u05)));
+EXPORT CONST VECTOR_CC vfloat __lgammaf_u1_finite(vfloat)         __attribute__((weak, alias(str_xlgammaf_u1)));
+EXPORT CONST VECTOR_CC vfloat __log10f_finite    (vfloat)         __attribute__((weak, alias(str_xlog10f    )));
+EXPORT CONST VECTOR_CC vfloat __logf_finite      (vfloat)         __attribute__((weak, alias(str_xlogf_u1   )));
+EXPORT CONST VECTOR_CC vfloat __powf_finite      (vfloat, vfloat) __attribute__((weak, alias(str_xpowf      )));
+EXPORT CONST VECTOR_CC vfloat __sinhf_finite     (vfloat)         __attribute__((weak, alias(str_xsinhf     )));
+EXPORT CONST VECTOR_CC vfloat __sqrtf_finite     (vfloat)         __attribute__((weak, alias(str_xsqrtf     )));
+EXPORT CONST VECTOR_CC vfloat __tgammaf_u1_finite(vfloat)         __attribute__((weak, alias(str_xtgammaf_u1)));
+
+#ifdef HEADER_MASKED
+#include HEADER_MASKED
+#endif
+#endif /* #ifdef ENABLE_GNUABI */
 
 #ifdef ENABLE_MAIN
 // gcc -DENABLE_MAIN -Wno-attributes -I../common -I../arch -DENABLE_AVX2 -mavx2 -mfma sleefsimdsp.c rempitab.c ../common/common.c -lm

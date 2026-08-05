@@ -33,7 +33,23 @@ extern const double Sleef_rempitabdp[];
 #define CONFIG 2
 #include "helpersse2.h"
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renamesse2_gnuabi.h"
+#else
 #include "renamesse2.h"
+#endif
+#endif
+#endif
+
+#ifdef ENABLE_AVX
+#define CONFIG 1
+#include "helperavx.h"
+#ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx_gnuabi.h"
+#else
+#include "renameavx.h"
+#endif
 #endif
 #endif
 
@@ -41,7 +57,11 @@ extern const double Sleef_rempitabdp[];
 #define CONFIG 1
 #include "helperavx2.h"
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx2_gnuabi.h"
+#else
 #include "renameavx2.h"
+#endif
 #endif
 #endif
 
@@ -57,7 +77,11 @@ extern const double Sleef_rempitabdp[];
 #define CONFIG 1
 #include "helperavx512f.h"
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameavx512f_gnuabi.h"
+#else
 #include "renameavx512f.h"
+#endif
 #endif
 #endif
 
@@ -67,7 +91,11 @@ extern const double Sleef_rempitabdp[];
 #define CONFIG 1
 #include "helperadvsimd.h"
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renameadvsimd_gnuabi.h"
+#else
 #include "renameadvsimd.h"
+#endif
 #endif
 #endif
 
@@ -75,7 +103,11 @@ extern const double Sleef_rempitabdp[];
 #define CONFIG 1
 #include "helpersve.h"
 #ifdef DORENAME
+#ifdef ENABLE_GNUABI
+#include "renamesve_gnuabi.h"
+#else
 #include "renamesve.h"
+#endif /* ENABLE_GNUABI */
 #endif /* DORENAME */
 #endif /* ENABLE_SVE */
 
@@ -507,6 +539,16 @@ EXPORT CONST vdouble xcos_u1(vdouble d) {
   return u;
 }
 
+#ifdef ENABLE_GNUABI
+#define TYPE2_FUNCATR static INLINE CONST 
+#define TYPE6_FUNCATR static INLINE CONST 
+#define SQRTU05_FUNCATR static INLINE CONST 
+#define XSINCOS sincosk
+#define XSINCOS_U1 sincosk_u1
+#define XSINCOSPI_U05 sincospik_u05
+#define XSINCOSPI_U35 sincospik_u35
+#define XMODF modfk
+#else
 #define TYPE2_FUNCATR EXPORT
 #define TYPE6_FUNCATR EXPORT CONST
 #define SQRTU05_FUNCATR EXPORT CONST
@@ -515,6 +557,7 @@ EXPORT CONST vdouble xcos_u1(vdouble d) {
 #define XSINCOSPI_U05 xsincospi_u05
 #define XSINCOSPI_U35 xsincospi_u35
 #define XMODF xmodf
+#endif
 
 TYPE2_FUNCATR vdouble2 XSINCOS(vdouble d) {
   vopmask o;
@@ -810,6 +853,38 @@ TYPE6_FUNCATR vdouble2 XMODF(vdouble x) {
 
   return ret;
 }
+
+#ifdef ENABLE_GNUABI
+EXPORT VECTOR_CC void xsincos(vdouble a, double *ps, double *pc) {
+  vdouble2 r = sincosk(a);
+  vstoreu_v_p_vd(ps, vd2getx_vd_vd2(r));
+  vstoreu_v_p_vd(pc, vd2gety_vd_vd2(r));
+}
+
+EXPORT VECTOR_CC void xsincos_u1(vdouble a, double *ps, double *pc) {
+  vdouble2 r = sincosk_u1(a);
+  vstoreu_v_p_vd(ps, vd2getx_vd_vd2(r));
+  vstoreu_v_p_vd(pc, vd2gety_vd_vd2(r));
+}
+
+EXPORT VECTOR_CC void xsincospi_u05(vdouble a, double *ps, double *pc) {
+  vdouble2 r = sincospik_u05(a);
+  vstoreu_v_p_vd(ps, vd2getx_vd_vd2(r));
+  vstoreu_v_p_vd(pc, vd2gety_vd_vd2(r));
+}
+
+EXPORT VECTOR_CC void xsincospi_u35(vdouble a, double *ps, double *pc) {
+  vdouble2 r = sincospik_u35(a);
+  vstoreu_v_p_vd(ps, vd2getx_vd_vd2(r));
+  vstoreu_v_p_vd(pc, vd2gety_vd_vd2(r));
+}
+
+EXPORT CONST VECTOR_CC vdouble xmodf(vdouble a, double *iptr) {
+  vdouble2 r = modfk(a);
+  vstoreu_v_p_vd(iptr, vd2gety_vd_vd2(r));
+  return vd2getx_vd_vd2(r);
+}
+#endif // #ifdef ENABLE_GNUABI
 
 static INLINE CONST vdouble2 sinpik(vdouble d) {
   vopmask o;
@@ -2768,7 +2843,7 @@ EXPORT CONST vdouble xerfc_u15(vdouble a) {
   return r;
 }
 
-#if !defined(SLEEF_GENHEADER)
+#if !defined(ENABLE_GNUABI) && !defined(SLEEF_GENHEADER)
 EXPORT CONST int xgetInt(int name) {
   if (1 <= name && name <= 10) return vavailability_i(name);
   return 0;
@@ -2812,3 +2887,31 @@ int main(int argc, char **argv) {
   //printf("%g, %g\n", vcast_d_vd(r.x), vcast_d_vd(r.y));
 }
 #endif
+
+#ifdef ENABLE_GNUABI
+/* "finite" aliases for compatibility with GLIBC */
+EXPORT CONST VECTOR_CC vdouble __acos_finite     (vdouble)          __attribute__((weak, alias(str_xacos     )));
+EXPORT CONST VECTOR_CC vdouble __acosh_finite    (vdouble)          __attribute__((weak, alias(str_xacosh    )));
+EXPORT CONST VECTOR_CC vdouble __asin_finite     (vdouble)          __attribute__((weak, alias(str_xasin_u1  )));
+EXPORT CONST VECTOR_CC vdouble __atan2_finite    (vdouble, vdouble) __attribute__((weak, alias(str_xatan2_u1 )));
+EXPORT CONST VECTOR_CC vdouble __atanh_finite    (vdouble)          __attribute__((weak, alias(str_xatanh    )));
+EXPORT CONST VECTOR_CC vdouble __cosh_finite     (vdouble)          __attribute__((weak, alias(str_xcosh     )));
+EXPORT CONST VECTOR_CC vdouble __exp10_finite    (vdouble)          __attribute__((weak, alias(str_xexp10    )));
+EXPORT CONST VECTOR_CC vdouble __exp2_finite     (vdouble)          __attribute__((weak, alias(str_xexp2     )));
+EXPORT CONST VECTOR_CC vdouble __exp_finite      (vdouble)          __attribute__((weak, alias(str_xexp      )));
+EXPORT CONST VECTOR_CC vdouble __fmod_finite     (vdouble, vdouble) __attribute__((weak, alias(str_xfmod     )));
+EXPORT CONST VECTOR_CC vdouble __remainder_finite(vdouble, vdouble) __attribute__((weak, alias(str_xremainder)));
+EXPORT CONST VECTOR_CC vdouble __modf_finite     (vdouble, vdouble *) __attribute__((weak, alias(str_xmodf   )));
+EXPORT CONST VECTOR_CC vdouble __hypot_u05_finite(vdouble, vdouble) __attribute__((weak, alias(str_xhypot_u05)));
+EXPORT CONST VECTOR_CC vdouble __lgamma_u1_finite(vdouble)          __attribute__((weak, alias(str_xlgamma_u1)));
+EXPORT CONST VECTOR_CC vdouble __log10_finite    (vdouble)          __attribute__((weak, alias(str_xlog10    )));
+EXPORT CONST VECTOR_CC vdouble __log_finite      (vdouble)          __attribute__((weak, alias(str_xlog_u1   )));
+EXPORT CONST VECTOR_CC vdouble __pow_finite      (vdouble, vdouble) __attribute__((weak, alias(str_xpow      )));
+EXPORT CONST VECTOR_CC vdouble __sinh_finite     (vdouble)          __attribute__((weak, alias(str_xsinh     )));
+EXPORT CONST VECTOR_CC vdouble __sqrt_finite     (vdouble)          __attribute__((weak, alias(str_xsqrt     )));
+EXPORT CONST VECTOR_CC vdouble __tgamma_u1_finite(vdouble)          __attribute__((weak, alias(str_xtgamma_u1)));
+
+#ifdef HEADER_MASKED
+#include HEADER_MASKED
+#endif
+#endif /* #ifdef ENABLE_GNUABI */

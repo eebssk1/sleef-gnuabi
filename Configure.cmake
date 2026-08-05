@@ -227,6 +227,7 @@ endif()
 # As we might compile the lib with MSVC, but generates bitcode with CLANG
 # Intel vector extensions.
 set(CLANG_FLAGS_ENABLE_SSE2 "-msse2")
+set(CLANG_FLAGS_ENABLE_AVX "-mavx")
 set(CLANG_FLAGS_ENABLE_AVX2 "-mavx2;-mfma")
 set(CLANG_FLAGS_ENABLE_AVX2128 "-mavx2;-mfma")
 set(CLANG_FLAGS_ENABLE_AVX512F "-mavx512f;-mfma")
@@ -433,6 +434,25 @@ endif()
 
 if (SLEEF_ENFORCE_SSE2 AND NOT COMPILER_SUPPORTS_SSE2)
   message(FATAL_ERROR "SLEEF_ENFORCE_SSE2 is specified and that feature is disabled or not supported by the compiler")
+endif()
+
+# AVX
+
+if(SLEEF_ARCH_X86 AND SLEEF_ENABLE_AVX)
+  string (REPLACE ";" " " CMAKE_REQUIRED_FLAGS "${FLAGS_ENABLE_AVX}")
+  CHECK_C_SOURCE_COMPILES("
+  #if defined(_MSC_VER)
+  #include <intrin.h>
+  #else
+  #include <x86intrin.h>
+  #endif
+  int main() {
+    __m256d r = _mm256_add_pd(_mm256_set1_pd(1), _mm256_set1_pd(2));
+  }" COMPILER_SUPPORTS_AVX)
+endif()
+
+if (SLEEF_ENFORCE_AVX AND NOT COMPILER_SUPPORTS_AVX)
+  message(FATAL_ERROR "SLEEF_ENFORCE_AVX is specified and that feature is disabled or not supported by the compiler")
 endif()
 
 # AVX2
@@ -702,6 +722,30 @@ CHECK_C_SOURCE_COMPILES("
     syscall(SYS_getrandom, &i, sizeof(i), 0);
   }"
   COMPILER_SUPPORTS_SYS_GETRANDOM)
+
+# Weak aliases
+
+CHECK_C_SOURCE_COMPILES("
+#if defined(__CYGWIN__)
+#define EXPORT __stdcall __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+  EXPORT int f(int a) {
+   return a + 2;
+  }
+  EXPORT int g(int a) __attribute__((weak, alias(\"f\")));
+  int main(void) {
+    return g(2);
+  }"
+  COMPILER_SUPPORTS_WEAK_ALIASES)
+if (COMPILER_SUPPORTS_WEAK_ALIASES AND
+    NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND
+    NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64" AND
+    NOT SLEEF_CLANG_ON_WINDOWS AND
+    NOT MINGW AND SLEEF_BUILD_GNUABI_LIBS)
+  set(ENABLE_GNUABI ${COMPILER_SUPPORTS_WEAK_ALIASES})
+endif()
 
 #
 
