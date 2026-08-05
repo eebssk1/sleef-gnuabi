@@ -196,17 +196,13 @@ typedef struct {
 } Sleef_longdouble2;
 #endif
 
-#if (defined (__GNUC__) || defined (__clang__) || defined(__INTEL_COMPILER)) && !defined(_MSC_VER)
+#if (defined (__GNUC__) || defined (__clang__)) && !defined(_MSC_VER)
 
 #define LIKELY(condition) __builtin_expect(!!(condition), 1)
 #define UNLIKELY(condition) __builtin_expect(!!(condition), 0)
 #define RESTRICT __restrict__
 
-#ifndef __arm__
 #define ALIGNED(x) __attribute__((aligned(x)))
-#else
-#define ALIGNED(x)
-#endif
 
 #if defined(SLEEF_GENHEADER)
 
@@ -242,7 +238,7 @@ typedef struct {
 #define SLEEF_INFINITYf __builtin_inff()
 #define SLEEF_INFINITYl __builtin_infl()
 
-#if defined(__INTEL_COMPILER) || defined (__clang__)
+#if defined (__clang__)
 #define SLEEF_INFINITYq __builtin_inf()
 #define SLEEF_NANq __builtin_nan("")
 #else
@@ -250,7 +246,7 @@ typedef struct {
 #define SLEEF_NANq (SLEEF_INFINITYq - SLEEF_INFINITYq)
 #endif
 
-#elif defined(_MSC_VER) // #if (defined (__GNUC__) || defined (__clang__) || defined(__INTEL_COMPILER)) && !defined(_MSC_VER)
+#elif defined(_MSC_VER) // #if (defined (__GNUC__) || defined (__clang__)) && !defined(_MSC_VER)
 
 #if defined(SLEEF_GENHEADER)
 
@@ -281,7 +277,7 @@ typedef struct {
 #define LIKELY(condition) (condition)
 #define UNLIKELY(condition) (condition)
 
-#if (defined(__GNUC__) || defined(__CLANG__)) && (defined(__i386__) || defined(__x86_64__)) && !defined(SLEEF_GENHEADER)
+#if (defined(__GNUC__) || defined(__CLANG__)) && defined(__x86_64__) && !defined(SLEEF_GENHEADER)
 #include <x86intrin.h>
 #endif
 
@@ -310,7 +306,7 @@ typedef struct {
 #endif
 #endif
 
-#endif // #elif defined(_MSC_VER) // #if (defined (__GNUC__) || defined (__clang__) || defined(__INTEL_COMPILER)) && !defined(_MSC_VER)
+#endif // #elif defined(_MSC_VER) // #if (defined (__GNUC__) || defined (__clang__)) && !defined(_MSC_VER)
 
 #if !defined(__linux__)
 #define isinff(x) ((x) == SLEEF_INFINITYf || (x) == -SLEEF_INFINITYf)
@@ -321,15 +317,9 @@ typedef struct {
 
 #endif // #ifndef __MISC_H__
 
-#ifdef ENABLE_AAVPCS
-#define VECTOR_CC __attribute__((aarch64_vector_pcs))
-#else
-#define VECTOR_CC
-#endif
-
 //
 
-#if defined (__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined (__GNUC__)
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #if !defined (__clang__)
