@@ -13,8 +13,8 @@ jobs:
         - /mnt:/build
     
     env:
-        CFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -fgcse-las -falign-labels=8:7:4 -falign-functions=24:18 -fmin-function-alignment=16 -ffunction-sections -fdata-sections"
-        CXXFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -fgcse-las -falign-labels=8:7:4 -falign-functions=24:18 -fmin-function-alignment=16 -ffunction-sections -fdata-sections"
+        CFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -falign-functions=32:18:16:12 -falign-loops=32:16:16:11 -falign-jumps=32:16:16:11 -fmin-function-alignment=8 -ffunction-sections -fdata-sections"
+        CXXFLAGS: "-O3 -mtune=broadwell -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -funsafe-math-optimizations -flimit-function-alignment -falign-functions=32:18:16:12 -falign-loops=32:16:16:11 -falign-jumps=32:16:16:11 -fmin-function-alignment=8 -ffunction-sections -fdata-sections"
 
     steps:
       - name: Checkout code
@@ -47,7 +47,7 @@ jobs:
           path: libs/*
 
       - name: ondemand release
-        uses: pyTooling/Actions/releaser@main
+        uses: pyTooling/Actions/releaser@r6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: libs/*
