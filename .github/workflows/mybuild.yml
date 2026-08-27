@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  buildx86:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/eebssk1/debian-trixie:latest
@@ -37,18 +37,84 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=$PWD/outs -DCMAKE_BUILD_TYPE=Release
           cmake --build ./builds
           cmake --install ./builds
-          mkdir libs
-          find outs -type f -name "lib*.a" -exec mv {} libs/ \;
+          mkdir output
+          mkdir output/lib
+          mkdir output/lib64
+          find outs -type f -name "libsleefgnuabi.a" -exec mv {} output/lib/ \;
+          ln -s libsleefgnuabi.a output/lib/libmvec.a
+          gcc -fPIC -O3 -Wa,-O2 -Wl,--whole-archive output/lib/libmvec.a -Wl,--no-whole-archive -shared -o libmvec.so.1 -Wl,-O3,--relax,-soname,libmvec.so.1
+          mv libmvec.so.1 output/lib64
+          ln -s libmvec.so.1 output/lib64/libmvec.so
+          mv output sleefgnuabi
+          tar --bz -cf sleefgnuabi-x86.tb2 sleefgnuabi
 
       - name: Upload resulting build
         uses: actions/upload-artifact@v4
         with:
-          name: result
-          path: libs/*
+          name: result-x86
+          path: sleefgnuabi/*
 
       - name: ondemand release
         uses: pyTooling/Actions/releaser@r6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: libs/*
+          files: '*.tb2'
           tag: ondemand
+
+  buildarm:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/eebssk1/debian-trixie:latest
+      volumes:
+        - /root:/user
+        - /mnt:/build
+    
+    env:
+        CFLAGS: "-O3 -mtune=cortex-a55 -fno-math-errno -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -flimit-function-alignment -falign-functions=32:16:16:12 -falign-loops=32:14:16:12 -falign-jumps=32:14:16:12 -fmin-function-alignment=8 -ffunction-sections -fdata-sections"
+        CXXFLAGS: "-O3 -mtune=cortex-a55 -fno-math-errno -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -flimit-function-alignment -falign-functions=32:16:16:12 -falign-loops=32:14:16:12 -falign-jumps=32:14:16:12 -fmin-function-alignment=8 -ffunction-sections -fdata-sections"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: load toolchain
+        run: curl -sL "https://github.com/eebssk1/aio_tc_build/releases/latest/download/aarch64-linux-gnu-native.tb2" | tar -C /opt --bz -x
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends --yes \
+            cmake \
+            build-essential
+
+      - name: build and move
+        run: |
+          export PATH="/opt/aarch64-linux-gnu/bin:$PATH"
+          cmake -B builds -DSLEEF_BUILD_LIBM=OFF -DSLEEF_BUILD_GNUABI_LIBS=ON -DSLEEF_ENABLE_TLFLOAT=ON -DSLEEF_BUILD_TESTS=OFF -DSLEEF_BUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_PREFIX=$PWD/outs -DCMAKE_BUILD_TYPE=Release
+          cmake --build ./builds
+          cmake --install ./builds
+          mkdir output
+          mkdir output/lib
+          mkdir output/lib64
+          find outs -type f -name "libsleefgnuabi.a" -exec mv {} output/lib/ \;
+          ln -s libsleefgnuabi.a output/lib/libmvec.a
+          gcc -fPIC -O3 -Wl,--whole-archive output/lib/libmvec.a -Wl,--no-whole-archive -shared -o libmvec.so.1 -Wl,-O3,--relax,-soname,libmvec.so.1
+          mv libmvec.so.1 output/lib64
+          ln -s libmvec.so.1 output/lib64/libmvec.so
+          mv output sleefgnuabi
+          tar --bz -cf sleefgnuabi-arm.tb2 sleefgnuabi
+
+      - name: Upload resulting build
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-arm
+          path: sleefgnuabi/*
+
+      - name: ondemand release
+        uses: pyTooling/Actions/releaser@r6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: '*.tb2'
+          tag: ondemand
+
