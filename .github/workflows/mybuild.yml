@@ -54,11 +54,13 @@ jobs:
           name: result-x86
           path: sleefgnuabi/*
 
-      - name: ondemand release
-        uses: pyTooling/Actions/releaser@r6
+      - name: release
+        uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: '*.tb2'
+          allowUpdates: true
+          artifacts: "*.tb2"
+          commit: main
+          makeLatest: true
           tag: ondemand
 
   buildarm:
@@ -111,10 +113,12 @@ jobs:
           name: result-arm
           path: sleefgnuabi/*
 
-      - name: ondemand release
-        uses: pyTooling/Actions/releaser@r6
+      - name: release
+        uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: '*.tb2'
+          allowUpdates: true
+          artifacts: "*.tb2"
+          commit: main
+          makeLatest: true
           tag: ondemand
 
