@@ -741,6 +741,10 @@ if(ENABLE_GNUABI)
           ENABLE_GNUABI=1
 	  )
 
+	if(${SIMD} STREQUAL "ADVSIMD")
+	  target_compile_definitions(${OBJECT_${SIMD}_${T}_GNUABI} PRIVATE ENABLE_AAVPCS=1)
+	endif()
+
 	if(SLEEF_ENABLE_ALTDIV)
 	  target_compile_definitions(${OBJECT_${SIMD}_${T}_GNUABI} PRIVATE SLEEF_ENABLE_ALTDIV=1)
 	endif()

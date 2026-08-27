@@ -429,6 +429,9 @@ function(add_gnuabi_compatibility_test SIMD MASKED)
     target_compile_definitions(${GNUABI_COMPATIBILITY_TEST}
       PRIVATE ENABLE_${SIMD}=1 ${COMMON_TARGET_DEFINITIONS})
   endif(MASKED)
+  if(${SIMD} STREQUAL "ADVSIMD")
+    target_compile_definitions(${GNUABI_COMPATIBILITY_TEST} PRIVATE ENABLE_AAVPCS=1)
+  endif()
   target_link_libraries(${GNUABI_COMPATIBILITY_TEST} ${TARGET_LIBSLEEFGNUABI} ${LIBM})
   # These are linker tests that don't really need to be executed,
   # but seeing them in the report of ctest gives an idea of what
